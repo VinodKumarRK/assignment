@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Check List page</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+      .login-form {
+        width: 400px;
+        margin: 50px auto;
+        font-size: 15px;
+      }
+      .login-form form {
+        margin-bottom: 15px;
+        background: #f7f7f7;
+        box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.3);
+        padding: 30px;
+      }
+      .login-form h2 {
+        margin: 0 0 15px;
+      }
+      .form-control,
+      .btn {
+        min-height: 38px;
+        border-radius: 2px;
+      }
+      .btn {
+        font-size: 15px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-form">      
+      <form action="#">
+        <h2>Add Item</h2>
+      <p class="text-center"><a href="./index.html">Logout</a></p>
+        <div class="form-group">
+          <label for="pwd">Item Name:</label>
+          <input
+            type="text"
+            class="form-control"
+            id="taskName"
+            placeholder="Enter name"
+            name="taskName"
+          />
+        </div>
+        <button type="button" class="btn btn-primary btn-add-item">Add</button>
+        <div class="form-group checkListContentView" style="display: none">
+          <label>Check List</label>
+          <div class="form-group form-check" id="checkListContent"></div>
+        </div>
+        <div class="form-group CompletedCheckListView" style="display: none">
+          <label>Completed Items Check List</label>
+          <div
+            class="form-group form-check"
+            id="checkListConfirmationContent"
+          ></div>
+        </div>
+      </form>
+    </div>
+    <script>
+      $(document).ready(function () {
+        var userId = sessionStorage.getItem("userId");
+        getcheckListItems();
+        getConfirmedCheckListItems();
+        var checkListArr = new Array();
+        var confirmationCheckListArr = new Array();
+        $(".btn-add-item").click(function () {
+          let taskId = parseInt(Math.random() * (10000 - 100) + 100);
+          let taskName = $("#taskName").val().trim();
+          if (taskName) {
+            if (sessionStorage.getItem("userCheckList" + userId)) {
+              checkListArr = JSON.parse(
+                sessionStorage.getItem("userCheckList" + userId)
+              );
+            }
+            checkListArr.push({ userId, taskId, taskName });
+            console.log("add item ckeck", checkListArr);
+            sessionStorage.setItem(
+              "userCheckList" + userId,
+              JSON.stringify(checkListArr)
+            );
+            $("#taskName").val("");
+            getcheckListItems();
+          }
+        });
+        function getcheckListItems() {
+          var checkListContent = "";
+          $("#checkListContent").html("");
+          if (sessionStorage.getItem("userCheckList" + userId)) {
+            let listItemArr = JSON.parse(
+              sessionStorage.getItem("userCheckList" + userId)
+            );
+            for (let i = 0; i < listItemArr.length; i++) {
+              let checkboxValue =
+                listItemArr[i].userId +
+                "," +
+                listItemArr[i].taskId +
+                "," +
+                listItemArr[i].taskName;
+              checkListContent +=
+                '<div class="form-group">' +
+                '<input class="form-check-input completed_item" value="' +
+                checkboxValue +
+                '" type="checkbox" title="Complete" name="completed" id="' +
+                listItemArr[i].taskId +
+                '"/>' +
+                listItemArr[i].taskName +
+                '<button type="button" style="margin-left: 10px;" class="btn btn-danger btn-sm delete_item" id="' +
+                checkboxValue +
+                '">Delete' +
+                "</button>" +
+                '<input type="number" class="move_item" name="moveTo" id="' +
+                i +
+                '" value="" placeholder="Enter index (move item)" style="margin-left:10px;"/>' +
+                "</div><br/>";
+            }
+            $(".checkListContentView").css("display", "block");
+            $("#checkListContent").html(checkListContent);
+          }
+        }
+
+        function getConfirmedCheckListItems() {
+          var checkListConfirmationContent = "";
+          $("#checkListConfirmationContent").html("");
+          if (sessionStorage.getItem("userConfirmedCheckListItems" + userId)) {
+            let listItemArr = JSON.parse(
+              sessionStorage.getItem("userConfirmedCheckListItems" + userId)
+            );
+            console.log("hhdhdhdh", listItemArr);
+            for (let i = 0; i < listItemArr.length; i++) {
+              let checkboxValue =
+                listItemArr[i].userId +
+                "," +
+                listItemArr[i].taskId +
+                "," +
+                listItemArr[i].taskName;
+              checkListConfirmationContent +=
+                "<label>" + listItemArr[i].taskName + "</label><br/>";
+            }
+            $(".CompletedCheckListView").css("display", "block");
+            $("#checkListConfirmationContent").html(
+              checkListConfirmationContent
+            );
+          }
+        }
+        $("#checkListContent").on("click", ".completed_item", function () {
+          let checkListId = $(this).val();
+          console.log("checklistValue", checkListId);
+          let confirmation = confirm("Are you sure u want move to completed");
+          if (confirmation) {
+            deleteItem(checkListId, true);
+            getcheckListItems();
+            getConfirmedCheckListItems();
+          }
+        });
+
+        $("#checkListContent").on("click", ".delete_item", function () {
+          let checkListId = $(this).attr("id");
+          console.log("checklistValue", checkListId);
+          let confirmation = confirm("Are you sure u want to delete");
+          if (confirmation) {
+            deleteItem(checkListId, false);
+            getcheckListItems();
+          }
+        });
+
+        $("#checkListContent").on("change", ".move_item", function () {
+          let old_index = $(this).attr("id");
+          let new_index = $(this).val();
+          if (sessionStorage.getItem("userCheckList" + userId)) {
+            checkListArr = JSON.parse(
+              sessionStorage.getItem("userCheckList" + userId)
+            );
+          }
+          let movedItemsArr = array_move(checkListArr, old_index, new_index);
+          sessionStorage.setItem(
+            "userCheckList" + userId,
+            JSON.stringify(movedItemsArr)
+          );
+          getcheckListItems();
+        });
+        var deleteItem = function (checkListId, ItemStatus) {
+          let checkListDataArr = checkListId.split(",");
+          userId = checkListDataArr[0];
+          taskId = parseInt(checkListDataArr[1]);
+          taskName = checkListDataArr[2];
+          if (sessionStorage.getItem("userCheckList" + userId)) {
+            checkListArr = JSON.parse(
+              sessionStorage.getItem("userCheckList" + userId)
+            );
+          }
+          removeByAttr(checkListArr, "taskId", taskId);
+          sessionStorage.setItem(
+            "userCheckList" + userId,
+            JSON.stringify(checkListArr)
+          );
+          if (ItemStatus) {
+            confirmationCheckListArr.push({ userId, taskId, taskName });
+            sessionStorage.setItem(
+              "userConfirmedCheckListItems" + userId,
+              JSON.stringify(confirmationCheckListArr)
+            );
+          }
+        };
+      });
+
+      function array_move(arr, old_index, new_index) {
+        while (old_index < 0) {
+          old_index += arr.length;
+        }
+        while (new_index < 0) {
+          new_index += arr.length;
+        }
+        if (new_index >= arr.length) {
+          var k = new_index - arr.length + 1;
+          while (k--) {
+            arr.push(undefined);
+          }
+        }
+        arr.splice(new_index, 0, arr.splice(old_index, 1)[0]);
+        return arr;
+      }
+
+      var removeByAttr = function (arr, attr, value) {
+        var i = arr.length;
+        while (i--) {
+          if (
+            arr[i] &&
+            arr[i].hasOwnProperty(attr) &&
+            arguments.length > 2 &&
+            arr[i][attr] === value
+          ) {
+            arr.splice(i, 1);
+          }
+        }
+        return arr;
+      };
+    </script>
+  </body>
+</html>
